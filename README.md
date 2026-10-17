@@ -14,6 +14,8 @@ At first, I followed the lessons step by step while trying to understand the rea
 
 My focus gradually expanded from making individual mechanics work to understanding how they fit together: which scripts need access to the GameDirector, how managers coordinate gameplay, and where a spawned prefab should receive its references and begin its behavior.
 
+The **Enemy script was one of my most important learning experiences**. Working on it helped me understand how an enum can represent a character's current action, how conditions determine the next action, and how that decision connects to movement, attacks, and animation. It was also where the purpose of coroutines became clearer to me through timed attacks, hit reactions, and interrupting an action when the enemy's situation changes.
+
 Throughout development, I also experimented with gameplay details, adjusted timings and feedback, and worked through problems using additional resources. This repository represents that learning process and the game I completed through it.
 
 ### What I focused on
@@ -21,8 +23,10 @@ Throughout development, I also experimented with gameplay details, adjusted timi
 - Defining responsibilities across gameplay scripts, managers, and UI components.
 - Passing references into spawned objects through initialization methods.
 - Coordinating gameplay with explicit game states.
+- Using enum-based enemy action states to organize decision-making and behavior execution.
+- Sequencing enemy actions with coroutines and cancelling attacks when interrupted.
 - Connecting physics, animation, combat, and player feedback.
-- Using coroutines for timed actions and object pooling for reusable projectiles.
+- Using object pooling for reusable projectiles.
 - Iterating on movement, weapon behavior, and audiovisual feedback.
 
 ---
@@ -64,6 +68,25 @@ Enemies use **NavMeshAgent** navigation and raycasts to detect obstacles between
 
 Melee attacks use timed hit checks; ranged enemies launch projectiles toward the player's position at the time of firing. Health bars, hit reactions, animation transitions, damage text, and death effects communicate combat results.
 
+#### Learning to Structure Decisions with Action States
+
+In [Enemy.cs](Assets/Project/Scripts/Element/Enemy.cs), the `ActionState` enum represents five behaviors: `Standing`, `WalkTowardsPlayer`, `WalkPlayerLastSeenPos`, `Attack`, and `Die`.
+
+The update flow first evaluates conditions such as distance, visibility, and whether an attack is in progress. It then uses the selected state to execute the corresponding behavior. For example, an enemy can chase a visible player, continue toward their last seen position after losing sight of them, or attack when close enough and allowed to do so.
+
+Implementing this flow helped me distinguish **deciding what a character should do** from **executing that behavior**. It also gave me practical experience with enum-based state management and the relationship between action states and animation states.
+
+#### Understanding Coroutines Through Enemy Actions
+
+The enemy's behavior made coroutine timing concrete for me:
+
+- `AttackCoroutine` waits before checking a melee hit or spawning a ranged projectile, then sequences the remaining attack steps.
+- `PlayGetHitCoroutine` interrupts an attack, plays a hit reaction, and waits before restoring the previous animation state.
+- `UpperBodyMaskCoroutine` temporarily changes an animation layer's weight.
+- A stored `Coroutine` reference allows the active attack to be stopped when the enemy is hit or dies, or when gameplay ends.
+
+Through these examples, I learned how `StartCoroutine`, `yield return new WaitForSeconds(...)`, and `StopCoroutine` work together to sequence gameplay over time, while the rest of the game continues updating.
+
 ### ⏱️ Levels & Game Flow
 
 The GameDirector coordinates starting, restarting, winning, and losing a level. LevelManager creates level prefabs and cycles through the available layouts. Later cycles add enemies through spawners and adjust the starting timer.
@@ -88,7 +111,7 @@ These files are useful starting points for exploring the implementation:
 | --- | --- | --- |
 | Game coordination | [GameDirector.cs](Assets/Project/Scripts/Manager/GameDirector.cs) | State changes and manager coordination |
 | Character control | [PlayerMovement.cs](Assets/Project/Scripts/Element/PlayerMovement.cs) | Movement, aiming, stamina, and dash timing |
-| Enemy AI | [Enemy.cs](Assets/Project/Scripts/Element/Enemy.cs) | Visibility checks, navigation, and combat states |
+| Enemy AI & learning focus | [Enemy.cs](Assets/Project/Scripts/Element/Enemy.cs) | Enum-based decisions, behavior execution, coroutine timing, and attack cancellation |
 | Weapons | [Weapon.cs](Assets/Project/Scripts/Element/Weapon.cs) | Fire timing, automatic reload, and projectile reuse |
 | Projectile lifecycle | [Bullet.cs](Assets/Project/Scripts/Element/Bullet.cs) | Collisions and returning bullets to their pool |
 | Grenade throwing | [GrenadeThrower.cs](Assets/Project/Scripts/Element/GrenadeThrower.cs) | Target selection, animation timing, and throw trajectory |
